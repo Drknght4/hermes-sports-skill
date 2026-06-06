@@ -1,7 +1,7 @@
 ---
 name: sports-scores
 description: Live scores, standings, odds, and F1 data from ESPN, Ergast, and The Odds API.
-version: 2.0.0
+version: 2.0.1
 author: Cipher
 license: MIT
 platforms: [linux, macos, windows]
@@ -514,3 +514,4 @@ curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${OD
 - The Odds API free tier allows 500 requests/month. Don't re-fetch the full sport list every query — cache the active sports mentally per session if possible.
 - Soccer odds use 3-way h2h (home/draw/away). US sports (NBA, NFL, MLB, NHL) use 2-way h2h (no draw). The parsing handles both — outcomes list length varies.
 - When user asks "odds for Barcelona" and La Liga is off-season, check Copa Libertadores as a fallback — South American seasons run year-round and often feature Brazilian/Argentine clubs Barça fans follow.
+- **The Odds API has zero motorsport coverage.** No F1, IndyCar, NASCAR, MotoGP, or any racing — not active, not inactive, simply absent from the 164-sport catalog. If a user asks for F1 odds, state this directly. Do not attempt an Odds API fetch for any motorsport.
