@@ -1,26 +1,57 @@
 ---
 name: sports-scores
-description: Live scores, standings, and F1 data from ESPN and Ergast APIs. No API keys required.
-version: 1.0.0
+description: Live scores, standings, odds, and F1 data from ESPN, Ergast, and The Odds API.
+version: 2.0.0
 author: Cipher
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [sports, scores, nba, nfl, mlb, nhl, soccer, f1, espn, live, standings]
+    tags: [sports, scores, nba, nfl, mlb, nhl, soccer, f1, espn, live, standings, odds, betting]
     category: tools
     requires_toolsets: [terminal]
+    favorite_teams:
+      soccer:
+        - FC Barcelona (La Liga)
+      f1:
+        - All drivers — no single team bias
 ---
 
 # Sports Scores
 
-Live scores, standings, and F1 data from free public APIs. No API keys required.
+Live scores, standings, odds, and F1 data from free public APIs plus The Odds API for betting lines.
+
+## API Keys
+
+| API | Required | Location |
+|-----|----------|----------|
+| ESPN | No | — |
+| Ergast / OpenF1 | No | — |
+| The Odds API | Yes — for odds queries | `~/.hermes/skills/tools/sports-scores/.env` → `ODDS_API_KEY` |
+
+If `ODDS_API_KEY` is missing, odds commands will fail gracefully with a message to configure the key. Scores and standings work without it.
+
+## Installation
+
+```bash
+# From GitHub repo (recommended)
+hermes skills install https://github.com/Drknght4/hermes-sports-skill
+
+# Or manually
+cp SKILL.md ~/.hermes/skills/tools/sports-scores/SKILL.md
+```
+
+Repo: [github.com/Drknght4/hermes-sports-skill](https://github.com/Drknght4/hermes-sports-skill)
+
+Restart Hermes or reload skills — the skill activates automatically when sports questions are detected.
 
 ## When to Use
 
 - User asks about any sports score, game result, or standings
 - User asks "how did [team] do" or "what's the score"
 - User asks about F1 race results, driver standings, or next race
+- User asks about betting odds, lines, spreads, or over/unders
+- User says "odds on", "what are the odds", "betting line", "Vegas line", "spread"
 - User says team name, sport name, or league name casually ("Knicks game", "F1 standings", "Premier League table")
 
 ## API Endpoints
@@ -43,6 +74,7 @@ Live scores, standings, and F1 data from free public APIs. No API keys required.
 | Soccer | Liga MX | `https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard` | — |
 | Soccer | Copa Libertadores | `https://site.api.espn.com/apis/site/v2/sports/soccer/CONMEBOL.LIBERTADORES/scoreboard` | — |
 | Soccer | FIFA World Cup | `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard` | — |
+
 | MMA/UFC | UFC | `https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard` | — |
 | Tennis | ATP/WTA | `https://site.api.espn.com/apis/site/v2/sports/tennis/scoreboard` | — |
 | Golf | PGA | `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard` | — |
@@ -57,34 +89,77 @@ Live scores, standings, and F1 data from free public APIs. No API keys required.
 | Driver standings | `https://ergast.com/api/f1/current/driverStandings.json` |
 | Constructor standings | `https://ergast.com/api/f1/current/constructorStandings.json` |
 | Next race | `https://ergast.com/api/f1/current/next.json` |
-| Live timing | `https://api.openf1.org/v1/position?session_key=latest` |
+|| Live timing | `https://api.openf1.org/v1/position?session_key=latest` |
+
+### The Odds API (API key required)
+
+Base URL: `https://api.the-odds-api.com`
+Auth: `apiKey` query parameter (stored in `~/.hermes/skills/tools/sports-scores/.env` as `ODDS_API_KEY`)
+
+**Key endpoint:**
+```
+GET /v4/sports/{sport_key}/odds/?apiKey={KEY}&regions=us,eu&markets=h2h
+```
+
+**Parameters:**
+- `regions` — `us`, `eu`, `uk`, `au`, or comma-separated (default: `us,eu`)
+- `markets` — `h2h` (moneyline), `spreads`, `totals` (over/under), or comma-separated (default: `h2h`)
+- `oddsFormat` — `decimal` (default), `american`
+- `dateFormat` — `iso` (default)
+
+**Available sports** — fetch the full list with:
+```bash
+curl -s "https://api.the-odds-api.com/v4/sports/?apiKey=$ODDS_API_KEY"
+```
+
+**Common sport keys for odds:**
+
+| Sport | Odds API Key | Notes |
+|-------|-------------|-------|
+| NFL | `americanfootball_nfl` | Active Sep–Feb |
+| NBA | `basketball_nba` | Active Oct–Jun |
+| MLB | `baseball_mlb` | Active Mar–Oct |
+| NHL | `icehocey_nhl` | Active Oct–Jun |
+| La Liga | `soccer_spain_la_liga` | In-season only (`active=true`) |
+| Premier League | `soccer_epl` | In-season only |
+| Champions League | `soccer_uefa_champs_league` | In-season only |
+| MLS | `soccer_usa_mls` | In-season only |
+| Bundesliga | `soccer_germany_bundesliga` | In-season only |
+| Serie A | `soccer_italy_serie_a` | In-season only |
+| Ligue 1 | `soccer_france_ligue_one` | In-season only |
+| Copa Libertadores | `soccer_conmebol_copa_libertadores` | Year-round |
+| FIFA World Cup | `soccer_fifa_world_cup` | Tournament only |
+| WNBA | `basketball_wnba` | Active May–Oct |
+| UFC/MMA | `mma_mixed_martial_arts` | Event-based |
+
+**Seasonality:** Many sports return empty results (`[]`) when out of season. Always check the `/v4/sports/` endpoint — the `active` field shows whether a sport currently has odds available.
 
 ## Sport Detection
 
 Map the user's question to the right endpoint:
 
-| Keywords | Sport | League Code |
-|----------|-------|-------------|
-| nba, basketball, knicks, lakers, celtics, warriors, bucks, etc. | Basketball | nba |
-| nfl, football, superbowl, chiefs, 49ers, cowboys, patriots, etc. | Football | nfl |
-| mlb, baseball, yankees, dodgers, mets, red sox, etc. | Baseball | mlb |
-| nhl, hockey, rangers, avalanche, panthers, oilers, etc. | Hockey | nhl |
-| la liga, barcelona, barca, real madrid, atletico, spanish league | Soccer | esp.1 |
-| premier league, epl, manchester, liverpool, arsenal, chelsea, english league | Soccer | eng.1 |
-| champions league, ucl, champions | Soccer | UEFA.CHAMPIONS |
-| mls, inter miami, lafc, american soccer | Soccer | usa.1 |
-| world cup, fifa, fifa world cup, mundial | Soccer | fifa.world |
-| bundesliga, bayern, dortmund, german league | Soccer | ger.1 |
-| serie a, ac milan, inter, juve, juventus, italian league | Soccer | ita.1 |
-| ligue 1, psg, paris saint-germain, french league | Soccer | fra.1 |
-| liga mx, mexican league, club america, chivas | Soccer | mex.1 |
-| copa libertadores, libertadores | Soccer | CONMEBOL.LIBERTADORES |
-| ufc, mma, ufc fight night, octagon | MMA | ufc |
-| tennis, atp, wta, wimbledon, roland garros, us open tennis, australian open | Tennis | tennis |
-| golf, pga, masters, pga tour | Golf | pga |
-| rugby, rugby world cup, six nations | Rugby | rugby |
-| wnba, women's basketball | Basketball | wnba |
-| f1, formula 1, formula one, grand prix, gp, race, verstappen, hamilton, leclerc, etc. | F1 | f1 |
+|| Keywords | Sport | League Code | Odds API Key |
+||----------|-------|-------------|-------------|
+|| nba, basketball, knicks, lakers, celtics, warriors, bucks, etc. | Basketball | nba | `basketball_nba` |
+|| nfl, football, superbowl, chiefs, 49ers, cowboys, patriots, etc. | Football | nfl | `americanfootball_nfl` |
+|| mlb, baseball, yankees, dodgers, mets, red sox, etc. | Baseball | mlb | `baseball_mlb` |
+|| nhl, hockey, rangers, avalanche, panthers, oilers, etc. | Hockey | nhl | `icehocey_nhl` |
+|| la liga, barcelona, barca, real madrid, atletico, spanish league | Soccer | esp.1 | `soccer_spain_la_liga` |
+|| premier league, epl, manchester, liverpool, arsenal, chelsea, english league | Soccer | eng.1 | `soccer_epl` |
+|| champions league, ucl, champions | Soccer | UEFA.CHAMPIONS | `soccer_uefa_champs_league` |
+|| mls, inter miami, lafc, american soccer | Soccer | usa.1 | `soccer_usa_mls` |
+|| world cup, fifa, fifa world cup, mundial | Soccer | fifa.world | `soccer_fifa_world_cup` |
+|| bundesliga, bayern, dortmund, german league | Soccer | ger.1 | `soccer_germany_bundesliga` |
+|| serie a, ac milan, inter, juve, juventus, italian league | Soccer | ita.1 | `soccer_italy_serie_a` |
+|| ligue 1, psg, paris saint-germain, french league | Soccer | fra.1 | `soccer_france_ligue_one` |
+|| liga mx, mexican league, club america, chivas | Soccer | mex.1 | — |
+|| copa libertadores, libertadores | Soccer | CONMEBOL.LIBERTADORES | `soccer_conmebol_copa_libertadores` |
+|| ufc, mma, ufc fight night, octagon | MMA | ufc | `mma_mixed_martial_arts` |
+|| tennis, atp, wta, wimbledon, roland garros, us open tennis, australian open | Tennis | tennis | — |
+|| golf, pga, masters, pga tour | Golf | pga | — |
+|| rugby, rugby world cup, six nations | Rugby | rugby | — |
+|| wnba, women's basketball | Basketball | wnba | `basketball_wnba` |
+|| f1, formula 1, formula one, grand prix, gp, race, verstappen, hamilton, leclerc, etc. | F1 | f1 | — |
 
 ## Fetching Data
 
@@ -117,6 +192,8 @@ for ev in d.get('events', []):
 curl -s "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
+# Standings structure varies by sport — parse entries appropriately
+# NBA: entries[].teamStats[] with stats like wins, losses, gamesBehind, etc.
 for entry in d.get('standings', {}).get('entries', [])[:10]:
     team = entry.get('team', {})
     abbr = team.get('abbreviation', '')
@@ -158,7 +235,7 @@ for entry in d.get('standings', {}).get('entries', []):
 "
 ```
 
-For Premier League, replace `esp.1` with `eng.1` in the URL. For Champions League, replace `esp.1` with `UEFA.CHAMPIONS`. For Bundesliga, use `ger.1`. For Serie A, use `ita.1`. For Ligue 1, use `fra.1`.
+For Premier League, replace `esp.1` with `eng.1` in the URL. For Champions League, replace `esp.1` with `UEFA.CHAMPIONS`.
 
 ### Standings (ESPN — Champions League)
 
@@ -242,6 +319,7 @@ print(f'Location: {race[\"Circuit\"][\"Location\"][\"locality\"]}, {race[\"Circu
 curl -s "https://api.openf1.org/v1/position?session_key=latest" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
+# Sort by position
 positions = sorted(d, key=lambda x: x.get('position', 999))
 if not positions:
     print('No live session currently active')
@@ -255,17 +333,107 @@ else:
 "
 ```
 
+### Odds — H2H / Moneyline (The Odds API)
+
+```bash
+# Read API key from skill .env
+ODDS_API_KEY=$(grep ODDS_API_KEY ~/.hermes/skills/tools/sports-scores/.env | cut -d= -f2)
+
+# Fetch odds for a sport (example: NBA)
+curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us,eu&markets=h2h" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if not d:
+    print('No upcoming odds found — sport may be off-season.')
+for ev in d[:8]:
+    home = ev.get('home_team', '?')
+    away = ev.get('away_team', '?')
+    commence = ev.get('commence_time', '?')[:16]
+    print(f'{home} vs {away}  ({commence})')
+    for bk in ev.get('bookmakers', [])[:3]:
+        for m in bk.get('markets', []):
+            if m['key'] == 'h2h':
+                prices = ' | '.join([f\"{o['name']}: {o['price']}\" for o in m.get('outcomes', [])])
+                print(f'  {bk[\"key\"]}: {prices}')
+    print()
+"
+```
+
+### Odds — Spreads & Totals (The Odds API)
+
+```bash
+ODDS_API_KEY=$(grep ODDS_API_KEY ~/.hermes/skills/tools/sports-scores/.env | cut -d= -f2)
+
+# Spreads (point spreads for US sports)
+curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=spreads" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for ev in d[:5]:
+    home = ev.get('home_team', '?')
+    away = ev.get('away_team', '?')
+    print(f'{home} vs {away}')
+    for bk in ev.get('bookmakers', [])[:2]:
+        for m in bk.get('markets', []):
+            if m['key'] == 'spreads':
+                lines = ' | '.join([f\"{o['name']}: {o.get('point','?')} ({o['price']})\" for o in m.get('outcomes', [])])
+                print(f'  {bk[\"key\"]}: {lines}')
+    print()
+"
+
+# Totals (over/under)
+curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=totals" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for ev in d[:5]:
+    home = ev.get('home_team', '?')
+    away = ev.get('away_team', '?')
+    print(f'{home} vs {away}')
+    for bk in ev.get('bookmakers', [])[:2]:
+        for m in bk.get('markets', []):
+            if m['key'] == 'totals':
+                lines = ' | '.join([f\"{o['name']}: {o.get('point','?')} ({o['price']})\" for o in m.get('outcomes', [])])
+                print(f'  {bk[\"key\"]}: {lines}')
+    print()
+"
+```
+
+### Odds — Check Active Sports
+
+```bash
+ODDS_API_KEY=$(grep ODDS_API_KEY ~/.hermes/skills/tools/sports-scores/.env | cut -d= -f2)
+
+# List only currently active sports with odds
+curl -s "https://api.the-odds-api.com/v4/sports/?apiKey=${ODDS_API_KEY}" | python3 -c "
+import sys, json
+sports = json.load(sys.stdin)
+active = [s for s in sports if s.get('active')]
+for s in sorted(active, key=lambda x: x['key']):
+    print(f\"{s['key']:<40} {s['title']}\")
+print(f'Active: {len(active)} / {len(sports)}')
+"
+```
+
+### Odds — American Format
+
+Append `&oddsFormat=american` to any odds URL to get American odds (e.g., `-110`, `+150`) instead of decimal (e.g., `1.91`, `2.50`).
+
+```bash
+ODDS_API_KEY=$(grep ODDS_API_KEY ~/.hermes/skills/tools/sports-scores/.env | cut -d= -f2)
+curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american"
+```
+
 ## Output Rules
 
 1. **Clean format.** Never dump raw JSON. Parse and present human-readable summaries.
-2. **Live games.** If a game status is "In Progress" or similar, clearly note it: **LIVE**.
+2. **Live games.** If a game status is "In Progress" or similar, clearly note it: **🔴 LIVE**.
 3. **Scheduled games.** Show date, time, and broadcast info.
 4. **Completed games.** Show final score with winner bold or marked.
 5. **Standings.** Top 10 only unless user asks for full table.
 6. **F1.** Show driver name, constructor, position, and points/gap.
-7. **Time zones.** Always show times in the user's local timezone. Convert from UTC when needed.
-8. **Multiple games.** If asking about a league, show all games for today. If asking about a team, show just that team's game.
-9. **No API keys.** All endpoints are free and keyless. If one fails, report the error — don't substitute a paid API.
+7. **User preferences.** FC Barcelona (La Liga) and F1 are the user's favorites. Highlight these when they appear.
+8. **Time zones.** Always show times in Eastern Time (EDT/EST). Convert from UTC when needed.
+9. **Multiple games.** If asking about a league, show all games for today. If asking about a team, show just that team's game.
+10. **Odds require API key.** The Odds API requires `ODDS_API_KEY` in `.env`. If missing, report it — don't skip silently. ESPN and Ergast remain keyless.
 
 ## Sport-Specific Notes
 
@@ -278,8 +446,9 @@ else:
 - Standings use AFC/NFC conference split.
 
 ### Soccer
-- La Liga, Premier League, Champions League, Bundesliga, Serie A, Ligue 1, Liga MX, Copa Libertadores, MLS, and FIFA World Cup are supported.
+- La Liga, Premier League, Champions League, and MLS are the supported leagues.
 - Soccer scoreboards show matchday groupings. Parse `competitions[0].competitors` for scores.
+- Barcelona is the user's team — always highlight their match when present.
 
 ### F1
 - Ergast API is reliable but sometimes 1-2 hours behind live.
@@ -318,12 +487,17 @@ else:
 | "Who won last night" | Fetch relevant sport's scoreboard, filter completed games |
 | "NFL scores" | Fetch NFL scoreboard, show all games |
 | "MLB standings" | Fetch MLB standings, show top 10 by division |
-| "Is there a hockey game on" | Fetch NHL scoreboard, show schedule |
+|| "Is there a hockey game on" | Fetch NHL scoreboard, show schedule |
+| "Barcelona odds" or "Barça odds" | Fetch soccer_spain_la_liga odds, find Barca match. Fall back to Copa Libertadores if La Liga is off-season |
+| "NBA odds" | Fetch basketball_nba odds, show h2h from top bookmakers |
+| "NFL odds" or "NFL spreads" | Fetch americanfootball_nfl odds with h2h or spreads market |
+| "MLB odds" | Fetch baseball_mlb odds, show h2h |
+| "What are the odds on [team]" | Detect sport → use Odds API key from sport detection table |
 
 ## Pitfalls
 
 - ESPN API responses are large. Use `python3 -c` to parse inline — don't dump full JSON.
-- Soccer league codes are not intuitive: `esp.1` (La Liga), `eng.1` (Premier League), `UEFA.CHAMPIONS` (Champions League), `usa.1` (MLS), `ger.1` (Bundesliga), `ita.1` (Serie A), `fra.1` (Ligue 1). Always use the exact codes.
+- Soccer league codes are not intuitive: `esp.1` (La Liga), `eng.1` (Premier League), `UEFA.CHAMPIONS` (Champions League), `usa.1` (MLS). Always use the exact codes.
 - Ergast rate limits to 4 requests/second. If you hit live timing + standings + results in one turn, add a 1-second pause between calls.
 - ESPN scoreboard dates default to "today" in US Eastern Time. For historical dates, append `?dates=YYYYMMDD` parameter.
 - OpenF1 live timing returns empty when no session is active — that's normal, not an error.
@@ -335,3 +509,8 @@ else:
 - PGA Golf leaderboard uses `sports/golf/pga` — different parsing (cut line, round scores).
 - Rugby scoreboard uses event-based format similar to UFC.
 - WNBA uses same basketball parsing as NBA.
+- The Odds API returns empty `[]` for off-season sports. Check `active` field in `/v4/sports/` before fetching odds. Don't treat empty results as an error — inform the user the sport is out of season.
+- The Odds API key must be read from `~/.hermes/skills/tools/sports-scores/.env`. NEVER hardcode it in commands or URLs that might appear in logs or session transcripts.
+- The Odds API free tier allows 500 requests/month. Don't re-fetch the full sport list every query — cache the active sports mentally per session if possible.
+- Soccer odds use 3-way h2h (home/draw/away). US sports (NBA, NFL, MLB, NHL) use 2-way h2h (no draw). The parsing handles both — outcomes list length varies.
+- When user asks "odds for Barcelona" and La Liga is off-season, check Copa Libertadores as a fallback — South American seasons run year-round and often feature Brazilian/Argentine clubs Barça fans follow.
