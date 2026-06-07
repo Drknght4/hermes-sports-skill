@@ -1,7 +1,7 @@
 ---
 name: sports-scores
 description: Live scores, standings, odds, and F1 data from ESPN, Ergast, and The Odds API.
-version: 2.0.1
+version: 2.1.0
 author: Cipher
 license: MIT
 platforms: [linux, macos, windows]
@@ -74,6 +74,7 @@ Restart Hermes or reload skills — the skill activates automatically when sport
 | Soccer | Liga MX | `https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard` | — |
 | Soccer | Copa Libertadores | `https://site.api.espn.com/apis/site/v2/sports/soccer/CONMEBOL.LIBERTADORES/scoreboard` | — |
 | Soccer | FIFA World Cup | `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard` | — |
+| Soccer | International Friendlies | `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.friendly/scoreboard` | — |
 
 | MMA/UFC | UFC | `https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard` | — |
 | Tennis | ATP/WTA | `https://site.api.espn.com/apis/site/v2/sports/tennis/scoreboard` | — |
@@ -149,6 +150,7 @@ Map the user's question to the right endpoint:
 || champions league, ucl, champions | Soccer | UEFA.CHAMPIONS | `soccer_uefa_champs_league` |
 || mls, inter miami, lafc, american soccer | Soccer | usa.1 | `soccer_usa_mls` |
 || world cup, fifa, fifa world cup, mundial | Soccer | fifa.world | `soccer_fifa_world_cup` |
+|| international friendly, friendlies, friendly match, morocco, norway, national team friendly | Soccer | fifa.friendly | — |
 || bundesliga, bayern, dortmund, german league | Soccer | ger.1 | `soccer_germany_bundesliga` |
 || serie a, ac milan, inter, juve, juventus, italian league | Soccer | ita.1 | `soccer_italy_serie_a` |
 || ligue 1, psg, paris saint-germain, french league | Soccer | fra.1 | `soccer_france_ligue_one` |
@@ -464,6 +466,7 @@ curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${OD
 | "NBA standings" | Fetch NBA standings, show top 10 |
 | "MLS" | Fetch usa.1 scoreboard, show all matches |
 | "World Cup" or "FIFA" | Fetch fifa.world scoreboard, show all matches |
+| "International friendly" or "friendlies" | Fetch fifa.friendly scoreboard, show all matches |
 | "Bundesliga" | Fetch ger.1 scoreboard, show all matches |
 | "Bundesliga standings" | Fetch ger.1 standings, show full table |
 | "Serie A" | Fetch ita.1 scoreboard, show all matches |
@@ -515,3 +518,4 @@ curl -s "https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${OD
 - Soccer odds use 3-way h2h (home/draw/away). US sports (NBA, NFL, MLB, NHL) use 2-way h2h (no draw). The parsing handles both — outcomes list length varies.
 - When user asks "odds for Barcelona" and La Liga is off-season, check Copa Libertadores as a fallback — South American seasons run year-round and often feature Brazilian/Argentine clubs Barça fans follow.
 - **The Odds API has zero motorsport coverage.** No F1, IndyCar, NASCAR, MotoGP, or any racing — not active, not inactive, simply absent from the 164-sport catalog. If a user asks for F1 odds, state this directly. Do not attempt an Odds API fetch for any motorsport.
+- **Test before push.** When adding a new data source or feature to this skill, test all claimed capabilities against the live API before committing and pushing to GitHub. An untested push that advertises F1 odds support would be worse than no push — it creates a false promise in the repo. Verify each sport key returns live data; if a sport is off-season, confirm the empty-result behavior is clean, then test at least one active sport end-to-end.

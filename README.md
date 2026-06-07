@@ -6,7 +6,7 @@ A [Hermes-Agent](https://github.com/NousResearch/hermes-agent) skill for live sp
 
 **US Leagues:** NBA, NFL, MLB, NHL, WNBA
 
-**Soccer:** La Liga, Premier League, Champions League, MLS, Bundesliga, Serie A, Ligue 1, Liga MX, Copa Libertadores, FIFA World Cup
+**Soccer:** La Liga, Premier League, Champions League, MLS, Bundesliga, Serie A, Ligue 1, Liga MX, Copa Libertadores, FIFA World Cup, International Friendlies
 
 **Motorsport:** Formula 1 (Ergast + OpenF1)
 
@@ -37,6 +37,7 @@ Restart Hermes or reload skills — the skill activates automatically when sport
 - "F1 driver standings" → fetches current F1 driver championship table
 - "Where is Barça in La Liga?" → fetches La Liga standings, highlights Barcelona's position
 - "World Cup 2026 scores" → fetches FIFA World Cup scoreboard
+- "International friendly scores" → fetches international friendlies scoreboard (fifa.friendly)
 - "Premier League table" → fetches EPL standings
 - "UFC fight card tonight" → fetches UFC event schedule
 - "Bundesliga standings" → fetches German league table
